@@ -1,0 +1,27 @@
+syntax = "proto3"; 
+
+
+option go_package ="./pb"; 
+
+
+service HellowServer{
+
+    rpc SayHellow(HellowReq) returns(HellowRes){}
+
+    rpc GetName(NameReq) returns(NameRes){}
+}
+
+message HellowReq{
+    string name=1;
+}
+
+message HellowRes{
+    string msg=1;
+}
+message NameReq{
+    string name=1;
+}
+
+message NameRes{
+    string name=1;
+}

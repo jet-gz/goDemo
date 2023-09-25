@@ -1,0 +1,88 @@
+package main
+
+import (
+	"fmt"
+	"reflect"
+
+	"github.com/go-playground/locales/zh"
+	ut "github.com/go-playground/universal-translator"
+	"gopkg.in/go-playground/validator.v9"
+	zhTranslations "gopkg.in/go-playground/validator.v9/translations/zh"
+)
+
+// 安装   go get gopkg.in/go-playground/validator.v9
+
+type InputLogin struct {
+	Email    string `json:"email" validate:"required,email" label:"邮箱"`
+	Password string `json:"password" validate:"required,max=16,min=6" label:"密码"`
+	Code     int    `json:"code" validate:"gte=1000,lte=9999" label:"验证码"`
+	C1       string `json:"c1" validate:"checkName" label:"测试字段"`
+}
+
+func checkName(fl validator.FieldLevel) bool {
+
+	val := fl.Field().String()
+
+	l1 := fl.GetTag()
+	fmt.Println(l1)
+	l2 := fl.Param()
+	fmt.Println(l2)
+
+	fmt.Println("----->", val)
+	//如果是张三就会触发验证
+	return val != "张三"
+}
+
+func main() {
+
+	input := &InputLogin{
+		Email:    "jet@dsd.com",
+		Password: "12356",
+		Code:     444411,
+		C1:       "张三",
+	}
+
+	//中文翻译器
+	zh_ch := zh.New()
+
+	uni := ut.New(zh_ch)
+	trans, _ := uni.GetTranslator("zh")
+
+	v := validator.New()
+	//注册自定义验证函数
+	v.RegisterValidation("checkName", checkName)
+	//注册翻译器
+	zhTranslations.RegisterDefaultTranslations(v, trans)
+
+	// 自定义错误信息
+	v.RegisterTranslation("checkName", trans, func(ut ut.Translator) error {
+		return ut.Add("checkName", "{0}字段名称不能叫张三!", true)
+	}, func(ut ut.Translator, fe validator.FieldError) string {
+		t, _ := ut.T("checkName", fe.Field())
+		return t
+	})
+
+	v.RegisterTagNameFunc(func(field reflect.StructField) string {
+
+		fmt.Println("----->", field.Name)
+
+		//通过反射取出label
+		label := field.Tag.Get("label")
+
+		//fmt.Sprint
+		return fmt.Sprint(field.Name, ",", label)
+	})
+
+	err := v.Struct(input)
+	if err != nil {
+		for _, err := range err.(validator.ValidationErrors) {
+			//翻译输出
+			m := err.Translate(trans)
+			fmt.Println(m)
+		}
+
+		return
+	}
+	fmt.Println("ok")
+
+}
